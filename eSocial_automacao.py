@@ -146,7 +146,7 @@ while True:
                             # Converte a resposta para JSON
                             data = response.json()
                             abertura = data.get('abertura')
-                            print(abertura)
+                            print(f"Data de abertura localizada: {abertura}")
 
                         except requests.exceptions.RequestException as e:
                             print("Erro na requisição", f"Erro: {e}")
@@ -619,7 +619,7 @@ while True:
                 # Converte a resposta para JSON
                 data = response.json()
                 abertura = data.get('abertura')
-                print(abertura)
+                print(f"Data de abertura localizada: {abertura}")
 
             except requests.exceptions.RequestException as e:
                 print("Erro na requisição", f"Erro: {e}")
