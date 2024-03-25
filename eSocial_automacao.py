@@ -57,8 +57,7 @@ while True:
             chrome_options = ChromeOptions()
             chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                                  force_update=True)
-            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options)
-            driver.headless = True
+            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options, headless=False)            
             driver.get(url)
             driver.maximize_window()
             WebDriverWait(driver, 120).until(
@@ -342,8 +341,7 @@ while True:
             chrome_options.add_experimental_option('prefs', prefs)
             chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                                  force_update=True)
-            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options)
-            driver.headless = True
+            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options,headless=False)            
             driver.get(url)
             driver.maximize_window()
             WebDriverWait(driver, 120).until(
@@ -360,7 +358,7 @@ while True:
 
             WebDriverWait(driver, 120).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="sairAplicacao"]'))
-            )
+            )            
             inscricao = driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/p[2]/span[1]').text.strip('-')
             print(f'CNPJ do procurador: {inscricao}')
             if len(driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/p[2]/span[1]').text) < 18:
@@ -573,8 +571,7 @@ while True:
             chrome_options = ChromeOptions()
             chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                                  force_update=True)
-            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options)
-            driver.headless = True
+            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options, headless=False)            
             driver.get(url)
             driver.maximize_window()
             WebDriverWait(driver, 120).until(
@@ -705,8 +702,7 @@ while True:
             chrome_options.add_experimental_option('prefs', prefs)
             chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                                  force_update=True)
-            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options)
-            driver.headless = True
+            driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options, headless=False)            
             driver.get(url)
             driver.maximize_window()
             WebDriverWait(driver, 120).until(
