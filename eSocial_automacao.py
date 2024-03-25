@@ -786,4 +786,3 @@ while True:
         print("Programa Finalizado")
         time.sleep(5)
         driver.quit()
-        janela.close()
