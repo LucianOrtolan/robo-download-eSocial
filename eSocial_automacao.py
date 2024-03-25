@@ -222,6 +222,9 @@ while True:
                                 start_date = end_date + timedelta(days=1)
                                 end_date = start_date + timedelta(days=30 * int(valores['periodo']))
 
+                            elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
+                                continue
+
                             if loop == False:
                                 linha_celula = linha[4]
 
@@ -319,6 +322,9 @@ while True:
 
                                 start_date = end_date + timedelta(days=1)
                                 end_date = start_date + timedelta(days=30 * int(valores['periodo']))
+                                
+                            elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
+                                continue
 
                             if loop == False:
                                 linha_celula = linha[4]
@@ -690,6 +696,9 @@ while True:
 
                     start_date = end_date + timedelta(days=1)
                     end_date = start_date + timedelta(days=30 * int(valores['periodo']))
+                                
+                elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
+                    continue
 
             print('Buscas Finalizadas')
             time.sleep(3)
