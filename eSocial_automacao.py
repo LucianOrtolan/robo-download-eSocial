@@ -223,7 +223,9 @@ while True:
                                 end_date = start_date + timedelta(days=30 * int(valores['periodo']))
 
                             elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                                continue
+                                time.sleep(2)
+                                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                                break
 
                             if loop == False:
                                 linha_celula = linha[4]
@@ -324,8 +326,10 @@ while True:
                                 end_date = start_date + timedelta(days=30 * int(valores['periodo']))
                                 
                             elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                                continue
-
+                                time.sleep(2)
+                                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                                break
+                                
                             if loop == False:
                                 linha_celula = linha[4]
 
@@ -698,7 +702,9 @@ while True:
                     end_date = start_date + timedelta(days=30 * int(valores['periodo']))
                                 
                 elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                    continue
+                    time.sleep(2)
+                    driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                    break
 
             print('Buscas Finalizadas')
             time.sleep(3)
