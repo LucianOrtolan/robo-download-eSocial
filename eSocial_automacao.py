@@ -166,11 +166,13 @@ while True:
 
                                 # Defina start_date para abertura_dt se for posterior a 2018-01-01, caso contrário, use 2018-01-01
                                 start_date = max(abertura_dt, datetime(2018, 1, 1))
+                                print(f"A data é posterior a 01/01/2018, será utilizada a data de abertura: {start_date}")
                             except ValueError:
                                 print("Erro ao converter a data de abertura.")
                                 start_date = datetime(2018, 1, 1)
                         else:
                             start_date = datetime(2018, 1, 1)
+                            print("A data é anterior a 01/01/2018, será utilizada a data de 01/01/2018.")
 
                         data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],
                                                        '%d/%m/%Y')
@@ -637,11 +639,13 @@ while True:
 
                     # Defina start_date para abertura_dt se for posterior a 2018-01-01, caso contrário, use 2018-01-01
                     start_date = max(abertura_dt, datetime(2018, 1, 1))
+                    print(f"A data é posterior a 01/01/2018, será utilizada a data de abertura: {start_date}")
                 except ValueError:
                     print("Erro ao converter a data de abertura.")
                     start_date = datetime(2018, 1, 1)
             else:
                 start_date = datetime(2018, 1, 1)
+                print("A data é anterior a 01/01/2018, será utilizada a data de 01/01/2018.")
 
             # Define as datas para busca
             data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68], '%d/%m/%Y')
