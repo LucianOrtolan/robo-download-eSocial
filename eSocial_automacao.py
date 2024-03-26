@@ -580,11 +580,16 @@ while True:
                                             EC.presence_of_element_located(
                                                 (By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
                                         driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
+                                        download_links = driver.find_elements('xpath',
+                                                                        '//*[@id="DataTables_Table_0"]/tbody/tr/td/a')
+                                        total_files2 = (len(download_links))
+                                        print(f'Total de arquivos: {total_files2}')                                        
+
                                         for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                                             link.click()
                                             time.sleep(7)
                                             soma_files += 1
-                                            print(f'Baixando {soma_files}/{total_files} arquivos')
+                                            print(f'Baixando {soma_files}/{total_files + total_files2} arquivos')
                                             arquivos_baixados = os.listdir(download_dir)
                                             for arquivo in arquivos_baixados:
                                                 if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
