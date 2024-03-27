@@ -12,6 +12,17 @@ from undetected_chromedriver import ChromeOptions
 import os
 import shutil
 import requests
+import psutil
+
+def fechar_processos_chrome():
+    for proc in psutil.process_iter():
+        # Verifica se o processo pertence ao Chrome
+        if "chrome" in proc.name():
+            try:
+                proc.terminate()  # Encerra o processo
+            except psutil.AccessDenied:
+                # Se houver permissões insuficientes para encerrar o processo
+                print(f"Permissões insuficientes para encerrar o processo {proc.pid}")
 
 class SistemaValidacao:
     def __init__(self, chave_valida):
@@ -845,3 +856,4 @@ while True:
                     print("Programa Finalizado")
                     time.sleep(5)
                     driver.quit()
+                    fechar_processos_chrome()
