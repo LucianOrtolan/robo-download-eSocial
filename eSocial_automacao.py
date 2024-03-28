@@ -12,7 +12,6 @@ from undetected_chromedriver import ChromeOptions
 import os
 import shutil
 import requests
-import psutil
 
 """ def fechar_processos_chrome():
     for proc in psutil.process_iter():
