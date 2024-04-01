@@ -143,8 +143,9 @@ while True:
                                 time.sleep(10)
 
                                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[15:]
-                                if mensagem_procuracao:
+                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                                print(mensagem_procuracao)
+                                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                                     print(f'Não possui procuração para o {cnpj}')
                                     linha_celula = linha[4]
 
@@ -288,8 +289,9 @@ while True:
                                 time.sleep(10)
 
                                 # Condição se verifica se possui procuração para o CPF que está sendo procurado
-                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'alert-danger').text[15:]
-                                if mensagem_procuracao:
+                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                                print(mensagem_procuracao)
+                                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                                     print(f'Não possui procuração para o {cnpj}')
                                     linha_celula = linha[4]
 
