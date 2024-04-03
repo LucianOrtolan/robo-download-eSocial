@@ -421,7 +421,7 @@ while True:
                             driver.find_element(By.CLASS_NAME, 'alterar-perfil').click()
 
                         for linha in sheet_empresas.iter_rows(min_row=int(valores['linhaini']), max_row=int(valores['linhafim'])):
-                            pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value}')
+                            pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value.rstrip()}')
                             documento = len(str(linha[2].value))
                             if documento >= 15:
                                 cnpj = linha[2].value
@@ -780,7 +780,7 @@ while True:
                             EC.presence_of_element_located((By.XPATH, '//*[@id="sairAplicacao"]'))
                         )
                         for linha in sheet_empresas.iter_rows(min_row=int(valores['linhaini']), max_row=int(valores['linhafim'])):
-                            pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value}')
+                            pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value.rstrip()}')
                             WebDriverWait(driver, 120).until(
                                 EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
                             )
