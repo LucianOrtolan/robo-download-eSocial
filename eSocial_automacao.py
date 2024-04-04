@@ -71,13 +71,14 @@ while True:
             [sg.Text('Salvar arquivos: ', size=20), sg.InputText('', key='salvar'), sg.FolderBrowse('Procurar')],
             [sg.Text('Data inicial (DD/MM/AAAA): ', size=20), sg.InputText('', size=10, key='dataini')],
             [sg.Checkbox('Certificado Próprio', key='proprio')],
+            [sg.Text('1. Se selecionada a opção "Certificado Próprio" a planilha não precisa ser informada')],
             [sg.Button('Iniciar'), sg.Button('Sair')]]
 
             # Janela
             janela = sg.Window('Download eSocial', layout)
 
             while True:
-                eventos, valores = janela.read()
+                eventos, valores = janela.read()                
 
                 if eventos == sg.WIN_CLOSED or eventos == 'Sair':
                     break
@@ -94,9 +95,10 @@ while True:
                     url = 'https://login.esocial.gov.br/login.aspx'
                     folder_path = "c:\\chromedriver"
 
-                    workbook = openpyxl.load_workbook(valores['caminho'])
-                    sheet_empresas = workbook.active
-                    documento = sheet_empresas.cell(row=int(valores['linhaini']), column=3).value
+                    if valores['proprio'] is False:
+                        workbook = openpyxl.load_workbook(valores['caminho'])
+                        sheet_empresas = workbook.active
+                        documento = sheet_empresas.cell(row=int(valores['linhaini']), column=3).value                    
 
                     # Condição para solicitar as datas quando o certificado é por procuração de PJ/PF
                     if valores['finalidade'] == '1' and valores['proprio'] is False:
