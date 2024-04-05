@@ -164,9 +164,13 @@ while True:
                                     driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
                                     driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(cnpj)
                                     driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(Keys.LEFT_CONTROL + 'v')
-                                    time.sleep(0.5)
+                                    WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
+                                        )
                                     driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                                    time.sleep(10)
+                                    WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                        )
 
                                     # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                                     mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
@@ -241,6 +245,9 @@ while True:
                                                     EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
                                                 )
                                                 driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+                                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
+                                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(valores['periodo']))                                               
+                                                                                                
 
                                             elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
                                                 time.sleep(2)
@@ -255,13 +262,17 @@ while True:
                                     # Buscas por CPF
                                     cnpj = linha[2].value
                                     driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
-                                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN + Keys.DOWN)
+                                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN)
                                     driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
-                                    driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(cnpj)
-                                    driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(Keys.LEFT_CONTROL + 'v')
-                                    time.sleep(0.5)
-                                    driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                                    time.sleep(10)
+                                    driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(cnpj)
+                                    driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(Keys.LEFT_CONTROL + 'v')
+                                    WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
+                                        )
+                                    driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
+                                    WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                        )                                    
                                     
                                     # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                                     mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
@@ -336,6 +347,8 @@ while True:
                                                     EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
                                                 )
                                                 driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+                                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
+                                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(valores['periodo']))
 
                                             elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
                                                 time.sleep(2)
@@ -399,9 +412,14 @@ while True:
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
                                 driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(cnpj)
                                 driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(Keys.LEFT_CONTROL + 'v')
-                                time.sleep(0.5)
+                                WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
+                                        )
                                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                                time.sleep(10)
+                                WebDriverWait(driver, 120).until(
+                                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                    )
+
                                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                                 mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[15:]
                                 if mensagem_procuracao:
@@ -416,7 +434,9 @@ while True:
                                         driver.refresh()
                                         pass
                                 else:
-                                    time.sleep(5)
+                                    WebDriverWait(driver, 120).until(
+                                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                    )
                                     driver.find_element('xpath', '//*[@id="geral"]/div').click()
                                     WebDriverWait(driver, 120).until(
                                     EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
@@ -440,7 +460,7 @@ while True:
 
                                     for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                                         link.click()
-                                        time.sleep(3.5)
+                                        time.sleep(7)
                                         soma_files += 1
                                         print(f'Baixando {soma_files}/{total_files} arquivos')
 
@@ -460,7 +480,7 @@ while True:
                                         soma_files2 = 0
                                         for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                                             link.click()
-                                            time.sleep(3.5)
+                                            time.sleep(7)
                                             soma_files2 += 1
                                             print(f'Baixando {soma_files2}/{total_files2} arquivos')
                                             arquivos_baixados = os.listdir(download_dir)
@@ -496,9 +516,13 @@ while True:
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
                                 driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(cnpj)
                                 driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(Keys.LEFT_CONTROL + 'v')
-                                time.sleep(0.5)
+                                WebDriverWait(driver, 120).until(
+                                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
+                                        )
                                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
-                                time.sleep(10)
+                                WebDriverWait(driver, 120).until(
+                                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                    )
                                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                                 mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[15:]
                                 if mensagem_procuracao:
@@ -513,7 +537,9 @@ while True:
                                         driver.refresh()
                                         pass
                                 else:
-                                    time.sleep(5)
+                                    WebDriverWait(driver, 120).until(
+                                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                                    )
                                     driver.find_element('xpath', '//*[@id="geral"]/div').click()
                                     WebDriverWait(driver, 120).until(
                                         EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
@@ -526,7 +552,7 @@ while True:
                                             (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
                                     )
                                     driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
-                                    time.sleep(5)
+                                    time.sleep(5)                                    
                                     print(f'"Iniciando download da empresa CNPJ: {cnpj}')
 
                                     download_links = driver.find_elements('xpath',
