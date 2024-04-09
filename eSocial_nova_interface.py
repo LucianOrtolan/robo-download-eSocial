@@ -16,13 +16,12 @@ import os
 import shutil
 import requests
 
-url = 'https://login.esocial.gov.br/login.aspx'
-folder_path = "c:\\chromedriver"
-
 def solicitar_ou_baixar():
     # Função que será chamada quando o botão for clicado
     opcao = solicitar_baixar_var.get()
-    if opcao == 1 and certificado_proprio_var is False:        
+    if opcao == 1 and certificado_proprio_var.get() is False:        
+        url = 'https://login.esocial.gov.br/login.aspx'
+        folder_path = "c:\\chromedriver"
         chrome_options = ChromeOptions()
         chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                                         force_update=True)
@@ -290,16 +289,18 @@ def solicitar_ou_baixar():
         time.sleep(7)
         driver.quit()        
 
-    elif opcao == 2 and certificado_proprio_var is False:
+    elif opcao == 2 and certificado_proprio_var.get() is False:
+        url = 'https://login.esocial.gov.br/login.aspx'
+        folder_path = "c:\\chromedriver"
+
         download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')
         
         def criar_pasta(nome_empresa):
             pasta_empresa = os.path.join(download_dir, nome_empresa)
             if not os.path.exists(pasta_empresa):
                 os.makedirs(pasta_empresa)
-            return pasta_empresa
+            return pasta_empresa        
         
-        print("Baixar")
         chrome_options = ChromeOptions()
         prefs = {'download.default_directory': download_dir}
         chrome_options.add_experimental_option('prefs', prefs)
@@ -563,7 +564,7 @@ def solicitar_ou_baixar():
         time.sleep(3)
         driver.quit()    
 
-    elif opcao == 1 and certificado_proprio_var:
+    elif opcao == 1 and certificado_proprio_var.get():
         url = 'https://login.esocial.gov.br/login.aspx'
         folder_path = "c:\\chromedriver"
         chrome_options = ChromeOptions()
@@ -700,7 +701,7 @@ def solicitar_ou_baixar():
         time.sleep(3)
         driver.quit()
 
-    elif opcao == 2 and certificado_proprio_var:
+    elif opcao == 2 and certificado_proprio_var.get():
         url = 'https://login.esocial.gov.br/login.aspx'
         folder_path = "c:\\chromedriver"
         download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')
