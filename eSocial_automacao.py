@@ -168,12 +168,15 @@ while True:
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
                                         )
                                     driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                                    WebDriverWait(driver, 120).until(
+                                    mensagem_procuracao = ''
+                                    try:
+                                        WebDriverWait(driver, 15).until(
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                                         )
+                                    except:
+                                        mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
 
                                     # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
                                     print(mensagem_procuracao)
                                     if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                                         print(f'Não possui procuração para o {cnpj}')
@@ -185,7 +188,7 @@ while True:
                                             workbook.save(valores['caminho'])
                                             print('Retornando as buscas')
                                             driver.refresh()
-                                            pass
+                                            continue
                                     else:
                                         print(f'CNPJ/CPF sendo buscado: {str(linha[2].value)}')
                                         driver.find_element('xpath', '//*[@id="geral"]/div').click()
@@ -256,7 +259,7 @@ while True:
                                         
                                     # Atualiza a data atual para a próxima iteração
                                     data_atual = ultima_data_final_por_empresa[empresas[0]] + timedelta(days=1)
-                                    driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                                    driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()                                
 
                                 else:
                                     # Buscas por CPF
@@ -270,12 +273,15 @@ while True:
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
                                         )
                                     driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
-                                    WebDriverWait(driver, 120).until(
+                                    mensagem_procuracao = ''
+                                    try:
+                                        WebDriverWait(driver, 15).until(
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
-                                        )                                    
+                                        )
+                                    except:
+                                        mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
                                     
                                     # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
                                     print(mensagem_procuracao)
                                     if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                                         print(f'Não possui procuração para o {cnpj}')
@@ -405,7 +411,7 @@ while True:
                         for linha in sheet_empresas.iter_rows(min_row=int(valores['linhaini']), max_row=int(valores['linhafim'])):
                             pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value.rstrip()}')
                             documento = len(str(linha[2].value))
-                            if documento >= 15:
+                            if documento >= 15: #CNPJ
                                 cnpj = linha[2].value
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN + Keys.DOWN)
@@ -416,12 +422,15 @@ while True:
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
                                         )
                                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                                WebDriverWait(driver, 120).until(
+                                mensagem_procuracao = ''
+                                try:
+                                    WebDriverWait(driver, 15).until(
                                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                                     )
+                                except:
+                                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
 
-                                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[15:]
+                                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado                                
                                 if mensagem_procuracao:
                                     print(f'Não possui procuração para o {cnpj}')
                                     linha_celula = linha[4]
@@ -509,7 +518,7 @@ while True:
                                         time.sleep(2)
                                         continue
 
-                            else:
+                            else: #CPF
                                 cnpj = linha[2].value
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
                                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN)
@@ -520,11 +529,15 @@ while True:
                                             EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
                                         )
                                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
-                                WebDriverWait(driver, 120).until(
+                                mensagem_procuracao = ''
+                                try:
+                                    WebDriverWait(driver, 15).until(
                                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                                     )
+                                except:
+                                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+
                                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                                mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[15:]
                                 if mensagem_procuracao:
                                     print(f'Não possui procuração para o {cnpj}')
                                     linha_celula = linha[4]
