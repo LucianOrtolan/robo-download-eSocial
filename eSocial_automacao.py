@@ -14,8 +14,6 @@ import os
 import shutil
 import requests
 
-
-
 # Layout
 sg.theme('Dark Blue 3')
 
