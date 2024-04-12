@@ -397,44 +397,29 @@ def solicitar_ou_baixar():
                 )
                     driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
                     time.sleep(5)
-                    print(f'Iniciando download da empresa CNPJ: {cnpj}')
+                    print(f'Iniciando download da empresa CNPJ: {cnpj}')                    
 
-                    download_links = driver.find_elements('xpath',
-                                                            '//*[@id="DataTables_Table_0"]/tbody/tr/td/a')
-                    total_files = (len(download_links))
-                    print(f'Total de arquivos da primeira página: {total_files}')
-                    soma_files = 0
-
+                    # Página 1
                     for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                         link.click()
                         time.sleep(7)
-                        soma_files += 1
-                        print(f'Baixando {soma_files}/{total_files} arquivos')
-
                         arquivos_baixados = os.listdir(download_dir)
                         for arquivo in arquivos_baixados:
                             if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                 caminho_arquivo = os.path.join(download_dir, arquivo)
                                 shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
+                    # Página 2
                     try:
-                        WebDriverWait(driver, 10).until(
-                                EC.presence_of_element_located(
-                                    (By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
                         driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        download_links2 = driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        total_files2 = (len(download_links2))
-                        print(f'Total de arquivos da segunda página: {total_files}')
-                        soma_files2 = 0
                         for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                             link.click()
-                            time.sleep(7)
-                            soma_files2 += 1
-                            print(f'Baixando {soma_files2}/{total_files2} arquivos')
+                            time.sleep(7)                            
                             arquivos_baixados = os.listdir(download_dir)
                             for arquivo in arquivos_baixados:
                                 if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                     caminho_arquivo = os.path.join(download_dir, arquivo)
-                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
+                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))                                    
 
                         loop = False
 
@@ -442,19 +427,48 @@ def solicitar_ou_baixar():
                             linha_celula = linha[4]
                             if hasattr(linha_celula, 'row'):
                                 linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = str(int(soma_files)+int(soma_files2)) + "/" + str(int(total_files)+int(total_files2))
+                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
                                 workbook.save(caminho_planilha_var.get())
-
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
+                        
                     except:
                         print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
                         time.sleep(2)
                         driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
                         time.sleep(2)
                         continue
+                    
+                    # Página 3
+                    try:
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[3]')))
+                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[3]').click()
+                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
+                            link.click()
+                            time.sleep(7)                            
+                            arquivos_baixados = os.listdir(download_dir)
+                            for arquivo in arquivos_baixados:
+                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
+                                    caminho_arquivo = os.path.join(download_dir, arquivo)
+                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
+                        loop = False
+
+                        if loop == False:
+                            linha_celula = linha[4]
+                            if hasattr(linha_celula, 'row'):
+                                linha_atual = linha_celula.row
+                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
+                                workbook.save(caminho_planilha_var.get())
+
+                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
+                        time.sleep(2)
+                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                        time.sleep(2)
+
+                    except:
+                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
+                        time.sleep(2)
+                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                        time.sleep(2)
+                        continue                
 
             else: #CPF
                 cnpj = linha[2].value
@@ -475,7 +489,7 @@ def solicitar_ou_baixar():
                 except:
                     mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
 
-                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
+                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado                                
                 if mensagem_procuracao:
                     print(f'Não possui procuração para o {cnpj}')
                     linha_celula = linha[4]
@@ -493,70 +507,83 @@ def solicitar_ou_baixar():
                     )
                     driver.find_element('xpath', '//*[@id="geral"]/div').click()
                     WebDriverWait(driver, 120).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
-                    )
+                    EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
+                )
                     driver.find_element('xpath', '//*[@id="menuDownload"]').click()
                     driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(
-                        Keys.DOWN + Keys.DOWN + Keys.ENTER)
+                    Keys.DOWN + Keys.DOWN + Keys.ENTER)
                     WebDriverWait(driver, 120).until(
-                        EC.presence_of_element_located(
-                            (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
-                    )
+                    EC.presence_of_element_located(
+                        (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
+                )
                     driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
-                    time.sleep(5)                                    
-                    print(f'"Iniciando download da empresa CNPJ: {cnpj}')
+                    time.sleep(5)
+                    print(f'Iniciando download da empresa CNPJ: {cnpj}')                    
 
-                    download_links = driver.find_elements('xpath',
-                                                        '//*[@id="DataTables_Table_0"]/tbody/tr/td/a')
-                    total_files = (len(download_links))
-                    print(f'Total de arquivos da primeira página: {total_files}')
-                    soma_files = 0
-
+                    # Página 1
                     for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                         link.click()
                         time.sleep(7)
-                        soma_files += 1
-                        print(f'Baixando {soma_files}/{total_files} arquivos')
-
                         arquivos_baixados = os.listdir(download_dir)
                         for arquivo in arquivos_baixados:
                             if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                 caminho_arquivo = os.path.join(download_dir, arquivo)
                                 shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
+                    # Página 2
                     try:
-                        WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located(
-                                (By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
                         driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        download_links2 = driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        total_files2 = (len(download_links2))
-                        print(f'Total de arquivos da segunda página: {total_files2}')                                        
-
                         for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
                             link.click()
-                            time.sleep(7)
-                            soma_files += 1
-                            print(f'Baixando {soma_files2}/{total_files2} arquivos')
+                            time.sleep(7)                            
+                            arquivos_baixados = os.listdir(download_dir)
+                            for arquivo in arquivos_baixados:
+                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
+                                    caminho_arquivo = os.path.join(download_dir, arquivo)
+                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))                                    
+
+                        loop = False
+
+                        if loop == False:
+                            linha_celula = linha[4]
+                            if hasattr(linha_celula, 'row'):
+                                linha_atual = linha_celula.row
+                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
+                                workbook.save(caminho_planilha_var.get())
+                        
+                    except:
+                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
+                        time.sleep(2)
+                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                        time.sleep(2)
+                        continue
+                    
+                    # Página 3
+                    try:
+                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[3]')))
+                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[3]').click()
+                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
+                            link.click()
+                            time.sleep(7)                            
                             arquivos_baixados = os.listdir(download_dir)
                             for arquivo in arquivos_baixados:
                                 if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                     caminho_arquivo = os.path.join(download_dir, arquivo)
                                     shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-
                         loop = False
 
                         if loop == False:
-
                             linha_celula = linha[4]
                             if hasattr(linha_celula, 'row'):
                                 linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = str(int(soma_files)+int(soma_files2)) + "/" + str(int(total_files)+int(total_files2))
+                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
                                 workbook.save(caminho_planilha_var.get())
 
                         print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
                         time.sleep(2)
                         driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
                         time.sleep(2)
+                        
                     except:
                         print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
                         time.sleep(2)
