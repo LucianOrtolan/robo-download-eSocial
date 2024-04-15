@@ -140,8 +140,6 @@ def solicitar_ou_baixar():
                             data_final_str = data_final.strftime('%d/%m/%Y')
 
                             driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
                             driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
                             driver.find_element('xpath', '//*[@id="DataFinal"]').click()
                             driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
@@ -246,8 +244,6 @@ def solicitar_ou_baixar():
                             data_final_str = data_final.strftime('%d/%m/%Y')
 
                             driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
                             driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
                             driver.find_element('xpath', '//*[@id="DataFinal"]').click()
                             driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
@@ -697,8 +693,6 @@ def solicitar_ou_baixar():
             print("Inicio: ", start_date_string, "   Fim: ", end_date_string)
 
             driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
             driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(start_date_string)
             driver.find_element('xpath', '//*[@id="DataFinal"]').click()
             driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
