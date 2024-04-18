@@ -1,5 +1,20 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
+
+def meses_buscar():
+    # Função que será chamada quando o botão for clicado
+    meses_buscar_var.get()     
+
+def selecionar_arquivo():
+    arquivo = filedialog.askopenfilename(filetypes=[("Arquivos XLSX", "*.xlsx")])
+    if arquivo:
+        caminho_planilha_var.set(arquivo)
+
+def selecionar_pasta_salvar():
+    pasta_salvar = filedialog.askdirectory()
+    if pasta_salvar:
+        caminho_pasta_salvar_var.set(pasta_salvar)
 
 # Criando a janela principal
 root = tk.Tk()
