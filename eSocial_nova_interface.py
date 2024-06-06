@@ -121,7 +121,6 @@ class BarraProgresso:
     def fechar_barra(self):
         self.barra_window.destroy()
 
-
 def solicitar_ou_baixar():
     # Função que será chamada quando o botão for clicado
     opcao = solicitar_baixar_var.get()
@@ -166,8 +165,7 @@ def solicitar_ou_baixar():
         
         workbook = openpyxl.load_workbook(caminho_planilha_var.get())
         sheet_empresas = workbook.active        
-        documento = sheet_empresas.cell(row=int(linha_ini.get()), column=3).value        
-        empresas = list(sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())))
+        documento = sheet_empresas.cell(row=int(linha_ini.get()), column=3).value      
         
         if data_ini.get():
             data_inicial = datetime.strptime(data_ini.get(), '%d/%m/%Y')
@@ -178,12 +176,12 @@ def solicitar_ou_baixar():
         loop = True
         erros_datas = ''
 
-        for linha in empresas:
+        for linha in sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())):
             documento = len(str(linha[2].value))
             data_atual = data_inicial
             # Condição que verifica se é CNPJ ou CPF na planilha                                
             if documento >= 15:
-                cnpj = linha[2].value # CNPJ
+                cnpj = linha[2].value # CNPJ                
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN + Keys.DOWN)
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
@@ -244,7 +242,7 @@ def solicitar_ou_baixar():
                     barra_thread = Thread()              
                     barra_thread.start() 
 
-                    # Fazer cinco requisições para a empresa atual
+                    # Faz as requisições para a empresa atual
                     while loop:
                         if data_final > data_corte:
                             data_final = data_corte
@@ -309,7 +307,7 @@ def solicitar_ou_baixar():
                                             print("Erro encontrado:", div.text.strip())
                                             erro_script = True
                                             erro_script_todas_empresas = True
-                                            erros_datas = erros_datas + start_date_string + ' a ' + end_date_string + ' - ' + div.text.strip() + '\n\n' 
+                                            erros_datas = erros_datas + data_inicial_str + ' a ' + data_final_str + ' - ' + div.text.strip() + '\n\n' 
 
                                     else:
                                         print("Nenhuma mensagem encontrada na página.")
@@ -321,9 +319,10 @@ def solicitar_ou_baixar():
                         data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
                     
                     barra_progresso.fechar_barra()
+                    driver.find_element('xpath', '//*[@id="header"]/div[2]/a').click()
             else:
                 # Buscas por CPF
-                cnpj = linha[2].value
+                cnpj = linha[2].value                
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN)
                 driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
@@ -365,67 +364,103 @@ def solicitar_ou_baixar():
                     WebDriverWait(driver, 120).until(
                         EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
                     )
+                    
+                    data_abertura = ret_data_abertura_empresa(cnpj)
+                    if data_abertura >= data_inicial:
+                        start_date = data_abertura
+                    else:
+                        start_date = data_inicial
 
-                    data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')    
+                    data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+                    data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
-                    # Obtém a última data final para a empresa
-                    if linha not in ultima_data_final_por_empresa:
-                        data_atual = data_inicial
-                        ultima_data_final_por_empresa[linha] = data_atual
-                    data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30)
+                    qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
+                    conta_loop = 0 
+                    erro_script = False
+                    loop = True
 
-                    # Fazer cinco requisições para a empresa atual
-                    for i in range(5):
+                    barra_progresso = BarraProgresso()
+                    barra_thread = Thread()              
+                    barra_thread.start() 
+
+                    # Faz as requisições para a empresa atual
+                    while loop:
                         if data_final > data_corte:
                             data_final = data_corte
-                            break
+                            loop = False
 
-                        data_inicial_str = ultima_data_final_por_empresa[linha].strftime('%d/%m/%Y')
+                        data_inicial_str = start_date.strftime('%d/%m/%Y')
                         data_final_str = data_final.strftime('%d/%m/%Y')
 
-                        driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-                        driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-                        driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
-                        driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
-                        driver.find_element('xpath', '//*[@id="DataFinal"]').click()
-                        driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
-                        driver.find_element('xpath', '//*[@id="DataFinal"]').send_keys(data_final_str)
-                        print(f'Data inicial: {data_inicial_str} - Data Final: {data_final_str}')
-                        driver.find_element('xpath', '//*[@id="btnSalvar"]').click()
-                        pedido = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
-                        print(pedido)
-                        if pedido == 'Solicitação enviada com sucesso.':
-                            WebDriverWait(driver, 120).until(
-                                EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                            )
-                            driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                            ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                            data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+                        print(f'Data Inicial: {data_inicial_str} - Data Final: {data_final_str}')
 
-                            linha_celula = linha[4]
-                            if hasattr(linha_celula, 'row'):
-                                linha_atual = linha_celula.row
-                                sheet_empresas[f'F{linha_atual}'] = 'Solicitação realizada'
-                                sheet_empresas[f"G{linha_atual}"] = "Última data solicitada: " + data_final_str
-                                workbook.save(caminho_planilha_var.get())
+                        conta_loop = conta_loop + 1
+                        barra_progresso.mostrar_barra(conta_loop,qtd_loop,data_inicial_str,data_final_str)
 
-                        elif pedido == 'Pedido não foi aceito. Já existe um pedido do mesmo tipo.':
-                            driver.find_element(By.XPATH, '//*[@id="btnCancelarAlteracao"]').click()
-                            WebDriverWait(driver, 120).until(
-                                EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                            )
-                            driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                            ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                            data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+                        url = 'https://www.esocial.gov.br/portal/download/Pedido/Solicitacao' 
+                        dados = {
+                                "npjOperadorPortuario": "",
+                                "CodigoLotacao": "",
+                                "CodigoRubrica": "",
+                                "CpfTrabalhador": "",
+                                "DataFinal": data_final_str,
+                                "DataInicial": data_inicial_str,
+                                "HoraFinal": "23",
+                                "HoraInicial": "00",
+                                "IdTabelaRubrica": "",
+                                "NumeroProcesso": "",
+                                "PerApur": "",
+                                "TipoPedido": "1",
+                                "TipoProcesso": "0"
+                                }
+                        
+                        response = driver.execute_script(f"""
+                            async function fetchData() {{
+                                try {{
+                                    const response = await fetch('{url}', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({dados}), redirect: 'manual' }});
+                                    const contentType = response.headers.get('content-type');
+                                    const data = await response.text();
+                                    return {{ data: data, contentType: contentType }};
+                                }} catch (error) {{
+                                    return {{ error: error.message }};
+                                }}
+                            }}
+                            return fetchData();
+                        """)
 
-                        elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                            time.sleep(2)
-                            driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                            break
+                        # Processa a resposta
+                        if 'error' in response:
+                            barra_progresso.fechar_barra()
+                            print("Erro durante a solicitação:", response['error'])                                
+                            break          
+                        else:
+                            content_type = response['contentType']
+                            if content_type and 'text/html' in content_type:
+                                html_content = response['data']
+                                if html_content.strip():
+                                    # Analisa o conteúdo HTML
+                                    soup = BeautifulSoup(html_content, 'html.parser')
+                                    # Procura por divs com a classe específica
+                                    alert_divs = soup.find_all('div', class_='fade-alert alert alert-danger retornoServidor')
+                                    # Verifica se foram encontradas divs
+                                    if alert_divs:
+                                        for div in alert_divs:
+                                            print("Erro encontrado:", div.text.strip())
+                                            erro_script = True
+                                            erro_script_todas_empresas = True
+                                            erros_datas = erros_datas + data_inicial_str + ' a ' + data_final_str + ' - ' + div.text.strip() + '\n\n' 
+
+                                    else:
+                                        print("Nenhuma mensagem encontrada na página.")
+                                else:
+                                    print("A resposta HTML está vazia.")
                     
-                # Atualiza a data atual para a próxima iteração
-                data_atual = ultima_data_final_por_empresa[empresas[0]] + timedelta(days=1)
-                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                        # Atualiza a data atual para a próxima iteração                            
+                        start_date = data_final + timedelta(days=1)
+                        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                    
+                    barra_progresso.fechar_barra()
+                    driver.find_element('xpath', '//*[@id="header"]/div[2]/a').click()
         
         print('Buscas Finalizadas')
         time.sleep(7)
@@ -767,106 +802,101 @@ def solicitar_ou_baixar():
         WebDriverWait(driver, 120).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
             )
-        # Verifica a data de abertura da empresa para pesquisar a partir dali se posterior a 01/01/2018
-        cnpj = driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/p[2]/span[1]').text.strip('-').rstrip()
-        print(cnpj)
-
-        cnpj_formatado = cnpj.replace('.', '').replace('/', '').replace('-', '')
-
-        # Monta a URL com o CNPJ
-        url = (f"https://www.receitaws.com.br/v1/cnpj/{cnpj_formatado}")
-
-        abertura = None
-
-        try:
-            # Faz a requisição HTTP
-            response = requests.get(url)
-            response.raise_for_status()  # Lança uma exceção se a requisição falhar
-
-            # Converte a resposta para JSON
-            data = response.json()
-            abertura = data.get('abertura')
-            print(f"Data de abertura localizada: {abertura}")
-
-        except requests.exceptions.RequestException as e:
-            print("Erro na requisição", f"Erro: {e}")
-
-        # Verifica se a data de abertura é válida antes de tentar converter
-        start_date = datetime(2018, 1, 1)
-
-        if abertura:
-            try:
-                # Converte a data de abertura para um objeto datetime
-                abertura_dt = datetime.strptime(abertura, '%d/%m/%Y')
-                print("Data de abertura original:", abertura_dt)
-
-                # Substitui o dia pelo dia 01
-                abertura_dt = abertura_dt.replace(day=1)
-                print("Data de inicio utilizada:", abertura_dt)
-
-                # Defina start_date para abertura_dt se for posterior a 2018-01-01, caso contrário, use 2018-01-01
-                start_date = max(abertura_dt, datetime(2018, 1, 1))
-                
-            except ValueError:
-                print("Erro ao converter a data de abertura.")
-                start_date = datetime(2018, 1, 1)
+        data_abertura = ret_data_abertura_empresa(cnpj)
+        if data_abertura >= data_inicial:
+            start_date = data_abertura
         else:
-            start_date = datetime(2018, 1, 1)                
+            start_date = data_inicial
 
-        # Define as datas para busca
-        data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68], '%d/%m/%Y')
+        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+        data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
-        if data_ini.get():
-            start_date = datetime.strptime(data_ini.get(), '%d/%m/%Y')
-        else:
-            start_date = datetime(2018, 1, 1)
-
-        end_date = start_date + timedelta(days=30 * int(meses_buscar_var.get()))
-
+        qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
+        conta_loop = 0 
+        erro_script = False
         loop = True
+
+        barra_progresso = BarraProgresso()
+        barra_thread = Thread()              
+        barra_thread.start() 
+
+        # Faz as requisições para a empresa atual
         while loop:
-            if end_date > data_corte:
-                end_date = data_corte
+            if data_final > data_corte:
+                data_final = data_corte
                 loop = False
 
-            start_date_string = start_date.strftime("%d/%m/%Y")
-            end_date_string = end_date.strftime("%d/%m/%Y")
+            data_inicial_str = start_date.strftime('%d/%m/%Y')
+            data_final_str = data_final.strftime('%d/%m/%Y')
 
-            print("Inicio: ", start_date_string, "   Fim: ", end_date_string)
+            print(f'Data Inicial: {data_inicial_str} - Data Final: {data_final_str}')
 
-            driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
-            driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(start_date_string)
-            driver.find_element('xpath', '//*[@id="DataFinal"]').click()
-            driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
-            driver.find_element('xpath', '//*[@id="DataFinal"]').send_keys(end_date_string)
-            driver.find_element('xpath', '//*[@id="btnSalvar"]').click()
-            pedido = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
-            print(pedido)
-            if pedido == 'Solicitação enviada com sucesso.':
-                WebDriverWait(driver, 120).until(
-                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                )
-                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+            conta_loop = conta_loop + 1
+            barra_progresso.mostrar_barra(conta_loop,qtd_loop,data_inicial_str,data_final_str)
 
-                start_date = end_date + timedelta(days=1)
-                end_date = start_date + timedelta(days=30 * int(meses_buscar_var.get()))
+            url = 'https://www.esocial.gov.br/portal/download/Pedido/Solicitacao' 
+            dados = {
+                    "npjOperadorPortuario": "",
+                    "CodigoLotacao": "",
+                    "CodigoRubrica": "",
+                    "CpfTrabalhador": "",
+                    "DataFinal": data_final_str,
+                    "DataInicial": data_inicial_str,
+                    "HoraFinal": "23",
+                    "HoraInicial": "00",
+                    "IdTabelaRubrica": "",
+                    "NumeroProcesso": "",
+                    "PerApur": "",
+                    "TipoPedido": "1",
+                    "TipoProcesso": "0"
+                    }
+            
+            response = driver.execute_script(f"""
+                async function fetchData() {{
+                    try {{
+                        const response = await fetch('{url}', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({dados}), redirect: 'manual' }});
+                        const contentType = response.headers.get('content-type');
+                        const data = await response.text();
+                        return {{ data: data, contentType: contentType }};
+                    }} catch (error) {{
+                        return {{ error: error.message }};
+                    }}
+                }}
+                return fetchData();
+            """)
 
-            elif pedido == 'Pedido não foi aceito. Já existe um pedido do mesmo tipo.':
-                driver.find_element(By.XPATH, '//*[@id="btnCancelarAlteracao"]').click()
-                WebDriverWait(driver, 120).until(
-                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                )
-                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+            # Processa a resposta
+            if 'error' in response:
+                barra_progresso.fechar_barra()
+                print("Erro durante a solicitação:", response['error'])                                
+                break          
+            else:
+                content_type = response['contentType']
+                if content_type and 'text/html' in content_type:
+                    html_content = response['data']
+                    if html_content.strip():
+                        # Analisa o conteúdo HTML
+                        soup = BeautifulSoup(html_content, 'html.parser')
+                        # Procura por divs com a classe específica
+                        alert_divs = soup.find_all('div', class_='fade-alert alert alert-danger retornoServidor')
+                        # Verifica se foram encontradas divs
+                        if alert_divs:
+                            for div in alert_divs:
+                                print("Erro encontrado:", div.text.strip())
+                                erro_script = True
+                                erro_script_todas_empresas = True
+                                erros_datas = erros_datas + data_inicial_str + ' a ' + data_final_str + ' - ' + div.text.strip() + '\n\n' 
 
-                start_date = end_date + timedelta(days=1)
-                end_date = start_date + timedelta(days=30 * int(meses_buscar_var.get()))
-                            
-            elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                time.sleep(2)
-                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                break
+                        else:
+                            print("Nenhuma mensagem encontrada na página.")
+                    else:
+                        print("A resposta HTML está vazia.")
+        
+            # Atualiza a data atual para a próxima iteração                            
+            start_date = data_final + timedelta(days=1)
+            data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+        
+        barra_progresso.fechar_barra()        
 
         print('Buscas Finalizadas')
         time.sleep(3)
