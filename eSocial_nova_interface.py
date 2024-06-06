@@ -15,6 +15,112 @@ from openpyxl.utils.cell import get_column_letter
 import os
 import shutil
 import requests
+from bs4 import BeautifulSoup
+from threading import Thread
+from tkinter import messagebox
+
+def retorna_qtd_loop(start_date,end_date,data_corte):
+      loop = True
+      data_ini = start_date
+      data_fim = end_date
+      conta_loop = 0 
+       
+      while loop:             
+         if data_fim > data_corte:
+            data_fim = data_corte
+            loop = False   
+             
+         data_ini = data_fim + timedelta(days=1)
+         data_fim = data_ini + timedelta(days=30*int(meses_buscar_var.get()))
+         conta_loop = conta_loop + 1 
+          
+      return conta_loop
+
+def ret_data_abertura_empresa(cnpj):      
+      cnpj_sem_mascara = ''.join(filter(str.isdigit, cnpj))
+      # Faz a solicitação HTTP para obter o JSON
+      try:
+         response = requests.get(f"https://receitaws.com.br/v1/cnpj/{cnpj_sem_mascara}")         
+         abertura_data = datetime(2018, 1, 1) 
+         # Verifica se a solicitação foi bem-sucedida (código de status 200)
+         if response.status_code == 200:
+            # Converte a resposta JSON em um dicionário Python
+            data_json = response.json()       
+            # Obtém o valor da chave "abertura"
+            abertura_string = data_json.get("abertura")           
+            abertura_data = datetime.strptime(abertura_string, "%d/%m/%Y")
+            #print("abertura_data CNPJ:",abertura_data) 
+         else:
+            print('Sem retorno de data na rotina 1') 
+            response = requests.get(f"https://api-publica.speedio.com.br/buscarcnpj?cnpj={cnpj_sem_mascara}")             
+            abertura_data = datetime(2018, 1, 1)                       
+            if response.status_code == 200:
+               data_json = response.json()  
+               abertura_string = data_json.get("DATA ABERTURA")              
+               abertura_data = datetime.strptime(abertura_string, "%d/%m/%Y")
+            else:              
+               print("Sem retorno de data na rotina 2") 
+               response = requests.get(f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_sem_mascara}") 
+                
+               abertura_data = datetime(2018, 1, 1)               
+               if response.status_code == 200:
+                  data_json = response.json()    
+                  abertura_string = data_json.get("data_inicio_atividade")                  
+                  abertura_data = datetime.strptime(abertura_string, "%Y-%m-%d") 
+               else:              
+                  print("Sem retorno de data na rotina 3") 
+       
+      except:
+         abertura_data = datetime(2018, 1, 1)
+         print("Erro na consulta do CNPJ") 
+
+      response.close()
+       
+      data_inicio_padrao = datetime(2018, 1, 1)
+      if data_inicio_padrao > abertura_data:
+         abertura_data = data_inicio_padrao
+
+      d_abertura_string = abertura_data.strftime("%d/%m/%Y")       
+      return abertura_data 
+class BarraProgresso:
+    def __init__(self):
+        self.barra_window = tk.Toplevel()
+        self.barra_window.title("Progresso do envio das datas")
+        self.barra_window.geometry("350x150")
+        self.barra_window.resizable(False, False)
+        self.barra_window.lift()  # Colocando a barra de progresso acima da janela principal
+        self.barra_window.focus_force()
+        
+        # Calcula a posição para centralizar a janela
+        largura_janela = self.barra_window.winfo_reqwidth()
+        altura_janela = self.barra_window.winfo_reqheight()
+        largura_tela = self.barra_window.winfo_screenwidth()
+        altura_tela = self.barra_window.winfo_screenheight()
+        x_pos = (largura_tela - largura_janela) // 2
+        y_pos = (altura_tela - altura_janela) // 2
+        self.barra_window.geometry(f"+{x_pos}+{y_pos}")
+        
+        self.progressbar = ttk.Progressbar(self.barra_window, orient="horizontal", length=200, mode="determinate")
+        self.progressbar.pack(side="top", padx=10, pady=10)
+        self.porcentagem_label = tk.Label(self.barra_window, text="", font=("Arial", 12))
+        self.porcentagem_label.pack(side="top", padx=10, pady=5)
+        self.descricao_datas = tk.Label(self.barra_window, text="", font=("Arial", 12))
+        self.descricao_datas.pack(side="top", padx=10, pady=5)
+        self.descricao_label = tk.Label(self.barra_window, text="", font=("Arial", 12))
+        self.descricao_label.pack(side="top", padx=10, pady=5)
+
+    def mostrar_barra(self, conta_loop,qtd_loop,start_date_string,end_date_string):
+        porcentagem = conta_loop * 100 // qtd_loop
+        self.progressbar["value"] = porcentagem
+        self.porcentagem_label.config(text=f"{porcentagem}%")
+        self.descricao_datas.config(text=f"{start_date_string} até {end_date_string}")
+        self.descricao_label.config(text=f"{conta_loop} de {qtd_loop}")
+        self.barra_window.update_idletasks()  # Atualiza a tela
+        self.progressbar.update()
+
+    def fechar_barra(self):
+        self.barra_window.destroy()
+
 
 def solicitar_ou_baixar():
     # Função que será chamada quando o botão for clicado
@@ -67,227 +173,259 @@ def solicitar_ou_baixar():
             data_inicial = datetime.strptime(data_ini.get(), '%d/%m/%Y')
         else:
             data_inicial = datetime(2018, 1, 1)
-
-        # Dicionário para armazenar a última data final de cada empresa
-        ultima_data_final_por_empresa = {}    
-
+        
         data_corte = ''                   
         loop = True
-        while loop:
-            for linha in empresas:
-                documento = len(str(linha[2].value))
-                data_atual = data_inicial
-                # Condição que verifica se é CNPJ ou CPF na planilha                                
-                if documento >= 15:
-                    cnpj = linha[2].value # CNPJ
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN + Keys.DOWN)
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
-                    driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(cnpj)
-                    driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(Keys.LEFT_CONTROL + 'v')
-                    WebDriverWait(driver, 120).until(
-                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
-                        )
-                    driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
-                    mensagem_procuracao = ''
-                    try:
-                        WebDriverWait(driver, 15).until(
-                            EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
-                        )
-                    except:
-                        mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+        erros_datas = ''
 
-                    # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                    print(mensagem_procuracao)
-                    if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
-                        print(f'Não possui procuração para o {cnpj}')
-                        linha_celula = linha[4]
+        for linha in empresas:
+            documento = len(str(linha[2].value))
+            data_atual = data_inicial
+            # Condição que verifica se é CNPJ ou CPF na planilha                                
+            if documento >= 15:
+                cnpj = linha[2].value # CNPJ
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN + Keys.DOWN)
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
+                driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(cnpj)
+                driver.find_element('xpath', '//*[@id="procuradorCnpj"]').send_keys(Keys.LEFT_CONTROL + 'v')
+                WebDriverWait(driver, 120).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cnpj"]'))
+                    )
+                driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
+                mensagem_procuracao = ''
+                try:
+                    WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                    )
+                except:
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
 
-                        if hasattr(linha_celula, 'row'):
-                            linha_atual = linha_celula.row
-                            sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
-                            workbook.save(caminho_planilha_var.get())
-                            print('Retornando as buscas')
-                            driver.refresh()
-                            continue
-                    else:
-                        print(f'CNPJ/CPF sendo buscado: {str(linha[2].value)}')
-                        driver.find_element('xpath', '//*[@id="geral"]/div').click()
-                        WebDriverWait(driver, 120).until(
-                            EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
-                        )
-                        driver.find_element('xpath', '//*[@id="menuDownload"]').click()
-                        driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(Keys.DOWN + Keys.ENTER)
-                        WebDriverWait(driver, 120).until(
-                            EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
-                        )
-                            
-                        data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')    
+                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
+                print(mensagem_procuracao)
+                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
+                    print(f'Não possui procuração para o {cnpj}')
+                    linha_celula = linha[4]
 
-                        # Obtém a última data final para a empresa
-                        if linha not in ultima_data_final_por_empresa:
-                            data_atual = data_inicial
-                            ultima_data_final_por_empresa[linha] = data_atual
-                        data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
-
-                        # Fazer cinco requisições para a empresa atual
-                        for i in range(5):
-                            if data_final > data_corte:
-                                data_final = data_corte
-                                loop = False
-
-                            data_inicial_str = ultima_data_final_por_empresa[linha].strftime('%d/%m/%Y')
-                            data_final_str = data_final.strftime('%d/%m/%Y')
-
-                            driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').click()
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').send_keys(data_final_str)
-                            print(f'Data inicial: {data_inicial_str} - Data Final: {data_final_str}')
-                            driver.find_element('xpath', '//*[@id="btnSalvar"]').click()
-                            pedido = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
-                            print(pedido)
-                            if pedido == 'Solicitação enviada com sucesso.':
-                                WebDriverWait(driver, 120).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                                )
-                                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
-
-                                linha_celula = linha[4]     
-                                if hasattr(linha_celula, 'row'):
-                                    linha_atual = linha_celula.row
-                                    sheet_empresas[f'F{linha_atual}'] = 'Solicitação realizada'
-                                    sheet_empresas[f"G{linha_atual}"] = "Última data solicitada: " + data_final_str
-                                    workbook.save(caminho_planilha_var.get())
-
-                            elif pedido == 'Pedido não foi aceito. Já existe um pedido do mesmo tipo.':
-                                driver.find_element(By.XPATH, '//*[@id="btnCancelarAlteracao"]').click()
-                                WebDriverWait(driver, 120).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                                )
-                                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))                             
-
-                            elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                                time.sleep(2)
-                                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                                break
-                        
-                    # Atualiza a data atual para a próxima iteração
-                    data_atual = ultima_data_final_por_empresa[empresas[0]] + timedelta(days=1)
-                    driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()                                
-
+                    if hasattr(linha_celula, 'row'):
+                        linha_atual = linha_celula.row
+                        sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
+                        workbook.save(caminho_planilha_var.get())
+                        print('Retornando as buscas')
+                        driver.refresh()
+                        continue
                 else:
-                    # Buscas por CPF
-                    cnpj = linha[2].value
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN)
-                    driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
-                    driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(cnpj)
-                    driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(Keys.LEFT_CONTROL + 'v')
+                    print(f'CNPJ/CPF sendo buscado: {str(linha[2].value)}')
+                    driver.find_element('xpath', '//*[@id="geral"]/div').click()
                     WebDriverWait(driver, 120).until(
-                            EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
-                        )
-                    driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
-                    mensagem_procuracao = ''
-                    try:
-                        WebDriverWait(driver, 15).until(
-                            EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
-                        )
-                    except:
-                        mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
+                    )
+                    driver.find_element('xpath', '//*[@id="menuDownload"]').click()
+                    driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(Keys.DOWN + Keys.ENTER)
+                    WebDriverWait(driver, 120).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
+                    )
                     
-                    # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
-                    print(mensagem_procuracao)
-                    if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
-                        print(f'Não possui procuração para o {cnpj}')
-                        linha_celula = linha[4]
-
-                        if hasattr(linha_celula, 'row'):
-                            linha_atual = linha_celula.row
-                            sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
-                            workbook.save(caminho_planilha_var.get())
-                            print('Retornando as buscas')
-                            driver.refresh()
-                            continue
+                    data_abertura = ret_data_abertura_empresa(cnpj)
+                    if data_abertura >= data_inicial:
+                        start_date = data_abertura
                     else:
-                        print(f'CNPJ/CPF sendo buscado: {str(linha[2].value)}')
-                        driver.find_element('xpath', '//*[@id="geral"]/div').click()
-                        WebDriverWait(driver, 120).until(
-                            EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
-                        )
-                        driver.find_element('xpath', '//*[@id="menuDownload"]').click()
-                        driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(Keys.DOWN + Keys.ENTER)
-                        WebDriverWait(driver, 120).until(
-                            EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
-                        )
+                        start_date = data_inicial
 
-                        data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')    
+                    data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+                    data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
-                        # Obtém a última data final para a empresa
-                        if linha not in ultima_data_final_por_empresa:
-                            data_atual = data_inicial
-                            ultima_data_final_por_empresa[linha] = data_atual
-                        data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30)
+                    qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
+                    conta_loop = 0 
+                    erro_script = False
+                    loop = True
 
-                        # Fazer cinco requisições para a empresa atual
-                        for i in range(5):
-                            if data_final > data_corte:
-                                data_final = data_corte
-                                break
+                    barra_progresso = BarraProgresso()
+                    barra_thread = Thread()              
+                    barra_thread.start() 
 
-                            data_inicial_str = ultima_data_final_por_empresa[linha].strftime('%d/%m/%Y')
-                            data_final_str = data_final.strftime('%d/%m/%Y')
+                    # Fazer cinco requisições para a empresa atual
+                    while loop:
+                        if data_final > data_corte:
+                            data_final = data_corte
+                            loop = False
 
-                            driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').click()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
-                            driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').click()
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
-                            driver.find_element('xpath', '//*[@id="DataFinal"]').send_keys(data_final_str)
-                            print(f'Data inicial: {data_inicial_str} - Data Final: {data_final_str}')
-                            driver.find_element('xpath', '//*[@id="btnSalvar"]').click()
-                            pedido = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
-                            print(pedido)
-                            if pedido == 'Solicitação enviada com sucesso.':
-                                WebDriverWait(driver, 120).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                                )
-                                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+                        data_inicial_str = start_date.strftime('%d/%m/%Y')
+                        data_final_str = data_final.strftime('%d/%m/%Y')
 
-                                linha_celula = linha[4]
-                                if hasattr(linha_celula, 'row'):
-                                    linha_atual = linha_celula.row
-                                    sheet_empresas[f'F{linha_atual}'] = 'Solicitação realizada'
-                                    sheet_empresas[f"G{linha_atual}"] = "Última data solicitada: " + data_final_str
-                                    workbook.save(caminho_planilha_var.get())
+                        print(f'Data Inicial: {data_inicial_str} - Data Final: {data_final_str}')
 
-                            elif pedido == 'Pedido não foi aceito. Já existe um pedido do mesmo tipo.':
-                                driver.find_element(By.XPATH, '//*[@id="btnCancelarAlteracao"]').click()
-                                WebDriverWait(driver, 120).until(
-                                    EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
-                                )
-                                driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
-                                ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
-                                data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+                        conta_loop = conta_loop + 1
+                        barra_progresso.mostrar_barra(conta_loop,qtd_loop,data_inicial_str,data_final_str)
 
-                            elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
-                                time.sleep(2)
-                                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                                break
+                        url = 'https://www.esocial.gov.br/portal/download/Pedido/Solicitacao' 
+                        dados = {
+                                "npjOperadorPortuario": "",
+                                "CodigoLotacao": "",
+                                "CodigoRubrica": "",
+                                "CpfTrabalhador": "",
+                                "DataFinal": data_final_str,
+                                "DataInicial": data_inicial_str,
+                                "HoraFinal": "23",
+                                "HoraInicial": "00",
+                                "IdTabelaRubrica": "",
+                                "NumeroProcesso": "",
+                                "PerApur": "",
+                                "TipoPedido": "1",
+                                "TipoProcesso": "0"
+                                }
                         
-                    # Atualiza a data atual para a próxima iteração
-                    data_atual = ultima_data_final_por_empresa[empresas[0]] + timedelta(days=1)
-                    driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                        response = driver.execute_script(f"""
+                            async function fetchData() {{
+                                try {{
+                                    const response = await fetch('{url}', {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }}, body: JSON.stringify({dados}), redirect: 'manual' }});
+                                    const contentType = response.headers.get('content-type');
+                                    const data = await response.text();
+                                    return {{ data: data, contentType: contentType }};
+                                }} catch (error) {{
+                                    return {{ error: error.message }};
+                                }}
+                            }}
+                            return fetchData();
+                        """)
+
+                        # Processa a resposta
+                        if 'error' in response:
+                            barra_progresso.fechar_barra()
+                            print("Erro durante a solicitação:", response['error'])                                
+                            break          
+                        else:
+                            content_type = response['contentType']
+                            if content_type and 'text/html' in content_type:
+                                html_content = response['data']
+                                if html_content.strip():
+                                    # Analisa o conteúdo HTML
+                                    soup = BeautifulSoup(html_content, 'html.parser')
+                                    # Procura por divs com a classe específica
+                                    alert_divs = soup.find_all('div', class_='fade-alert alert alert-danger retornoServidor')
+                                    # Verifica se foram encontradas divs
+                                    if alert_divs:
+                                        for div in alert_divs:
+                                            print("Erro encontrado:", div.text.strip())
+                                            erro_script = True
+                                            erro_script_todas_empresas = True
+                                            erros_datas = erros_datas + start_date_string + ' a ' + end_date_string + ' - ' + div.text.strip() + '\n\n' 
+
+                                    else:
+                                        print("Nenhuma mensagem encontrada na página.")
+                                else:
+                                    print("A resposta HTML está vazia.")
+                    
+                        # Atualiza a data atual para a próxima iteração                            
+                        start_date = data_final + timedelta(days=1)
+                        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                    
+                    barra_progresso.fechar_barra()
+            else:
+                # Buscas por CPF
+                cnpj = linha[2].value
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').click()
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.DOWN)
+                driver.find_element('xpath', '//*[@id="perfilAcesso"]').send_keys(Keys.ENTER)
+                driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(cnpj)
+                driver.find_element('xpath', '//*[@id="procuradorCpf"]').send_keys(Keys.LEFT_CONTROL + 'v')
+                WebDriverWait(driver, 120).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="btn-verificar-procuracao-cpf"]'))
+                    )
+                driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
+                mensagem_procuracao = ''
+                try:
+                    WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                    )
+                except:
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                
+                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
+                print(mensagem_procuracao)
+                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
+                    print(f'Não possui procuração para o {cnpj}')
+                    linha_celula = linha[4]
+
+                    if hasattr(linha_celula, 'row'):
+                        linha_atual = linha_celula.row
+                        sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
+                        workbook.save(caminho_planilha_var.get())
+                        print('Retornando as buscas')
+                        driver.refresh()
+                        continue
+                else:
+                    print(f'CNPJ/CPF sendo buscado: {str(linha[2].value)}')
+                    driver.find_element('xpath', '//*[@id="geral"]/div').click()
+                    WebDriverWait(driver, 120).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
+                    )
+                    driver.find_element('xpath', '//*[@id="menuDownload"]').click()
+                    driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(Keys.DOWN + Keys.ENTER)
+                    WebDriverWait(driver, 120).until(
+                        EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
+                    )
+
+                    data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')    
+
+                    # Obtém a última data final para a empresa
+                    if linha not in ultima_data_final_por_empresa:
+                        data_atual = data_inicial
+                        ultima_data_final_por_empresa[linha] = data_atual
+                    data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30)
+
+                    # Fazer cinco requisições para a empresa atual
+                    for i in range(5):
+                        if data_final > data_corte:
+                            data_final = data_corte
+                            break
+
+                        data_inicial_str = ultima_data_final_por_empresa[linha].strftime('%d/%m/%Y')
+                        data_final_str = data_final.strftime('%d/%m/%Y')
+
+                        driver.find_element('xpath', '//*[@id="TipoPedido"]/option[2]').click()
+                        driver.find_element('xpath', '//*[@id="DataInicial"]').click()
+                        driver.find_element('xpath', '//*[@id="DataInicial"]').clear()
+                        driver.find_element('xpath', '//*[@id="DataInicial"]').send_keys(data_inicial_str)
+                        driver.find_element('xpath', '//*[@id="DataFinal"]').click()
+                        driver.find_element('xpath', '//*[@id="DataFinal"]').clear()
+                        driver.find_element('xpath', '//*[@id="DataFinal"]').send_keys(data_final_str)
+                        print(f'Data inicial: {data_inicial_str} - Data Final: {data_final_str}')
+                        driver.find_element('xpath', '//*[@id="btnSalvar"]').click()
+                        pedido = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                        print(pedido)
+                        if pedido == 'Solicitação enviada com sucesso.':
+                            WebDriverWait(driver, 120).until(
+                                EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
+                            )
+                            driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+                            ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
+                            data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+
+                            linha_celula = linha[4]
+                            if hasattr(linha_celula, 'row'):
+                                linha_atual = linha_celula.row
+                                sheet_empresas[f'F{linha_atual}'] = 'Solicitação realizada'
+                                sheet_empresas[f"G{linha_atual}"] = "Última data solicitada: " + data_final_str
+                                workbook.save(caminho_planilha_var.get())
+
+                        elif pedido == 'Pedido não foi aceito. Já existe um pedido do mesmo tipo.':
+                            driver.find_element(By.XPATH, '//*[@id="btnCancelarAlteracao"]').click()
+                            WebDriverWait(driver, 120).until(
+                                EC.presence_of_element_located((By.XPATH, '//*[@id="conteudo-pagina"]/div[1]/a'))
+                            )
+                            driver.find_element('xpath', '//*[@id="conteudo-pagina"]/div[1]/a').click()
+                            ultima_data_final_por_empresa[linha] = data_final + timedelta(days=1)
+                            data_final = ultima_data_final_por_empresa[linha] + timedelta(days=30 * int(meses_buscar_var.get()))
+
+                        elif pedido == 'O limite de solicitações foi alcançado. Somente é permitido 72 (doze) solicitações por dia.':
+                            time.sleep(2)
+                            driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+                            break
+                    
+                # Atualiza a data atual para a próxima iteração
+                data_atual = ultima_data_final_por_empresa[empresas[0]] + timedelta(days=1)
+                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
         
         print('Buscas Finalizadas')
         time.sleep(7)
