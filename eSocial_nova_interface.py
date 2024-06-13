@@ -802,7 +802,8 @@ def solicitar_ou_baixar():
         WebDriverWait(driver, 120).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
             )
-        data_abertura = ret_data_abertura_empresa(cnpj)
+        data_inicial = datetime(2018, 1, 1)
+        data_abertura = datetime(2018, 1, 1)        
         if data_abertura >= data_inicial:
             start_date = data_abertura
         else:
