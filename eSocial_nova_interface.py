@@ -18,6 +18,9 @@ import requests
 from bs4 import BeautifulSoup
 from threading import Thread
 from tkinter import messagebox
+import psutil
+import signal
+from scriptdownload import script_download
 
 def retorna_qtd_loop(start_date,end_date,data_corte):
       loop = True
@@ -121,9 +124,22 @@ class BarraProgresso:
     def fechar_barra(self):
         self.barra_window.destroy()
 
+def find_and_kill_process(process_name):
+    # Itera sobre todos os processos em execução
+    for proc in psutil.process_iter(attrs=['pid', 'name']):
+        if process_name.lower() in proc.info['name'].lower():
+            # Se o processo for encontrado, mata o processo
+            os.kill(proc.info['pid'], signal.SIGTERM)
+            print(f'Processo {process_name} (PID: {proc.info["pid"]}) foi encerrado.')
+            return
+    print(f'Processo {process_name} não encontrado.')
+
+find_and_kill_process('chromedriver.exe')
+
 def solicitar_ou_baixar():
     # Função que será chamada quando o botão for clicado
     opcao = solicitar_baixar_var.get()
+    find_and_kill_process('chromedriver.exe')    
     if opcao == 1 and certificado_proprio_var.get() is False:        
         url = 'https://login.esocial.gov.br/login.aspx'
         folder_path = "c:\\chromedriver"
@@ -167,18 +183,12 @@ def solicitar_ou_baixar():
         sheet_empresas = workbook.active        
         documento = sheet_empresas.cell(row=int(linha_ini.get()), column=3).value      
         
-        if data_ini.get():
-            data_inicial = datetime.strptime(data_ini.get(), '%d/%m/%Y')
-        else:
-            data_inicial = datetime(2018, 1, 1)
-        
         data_corte = ''                   
         loop = True
         erros_datas = ''
 
         for linha in sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())):
-            documento = len(str(linha[2].value))
-            data_atual = data_inicial
+            documento = len(str(linha[2].value))            
             # Condição que verifica se é CNPJ ou CPF na planilha                                
             if documento >= 15:
                 cnpj = linha[2].value # CNPJ                
@@ -225,7 +235,8 @@ def solicitar_ou_baixar():
                     )
                     
                     data_abertura = ret_data_abertura_empresa(cnpj)
-                    if data_abertura >= data_inicial:
+                    data_inicial = datetime(2018, 1, 1)
+                    if data_abertura >= data_inicial:                        
                         start_date = data_abertura
                     else:
                         start_date = data_inicial
@@ -286,7 +297,7 @@ def solicitar_ou_baixar():
                             }}
                             return fetchData();
                         """)
-
+                        
                         # Processa a resposta
                         if 'error' in response:
                             barra_progresso.fechar_barra()
@@ -317,6 +328,12 @@ def solicitar_ou_baixar():
                         # Atualiza a data atual para a próxima iteração                            
                         start_date = data_final + timedelta(days=1)
                         data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                        linha_celula = linha[4]
+                        if hasattr(linha_celula, 'row'):
+                            linha_atual = linha_celula.row
+                            sheet_empresas[f"H{linha_atual}"] = "OK"
+                            sheet_empresas[f"J{linha_atual}"] = data_inicial_str + " a " + data_final_str
+                            workbook.save(caminho_planilha_var.get())
                     
                     barra_progresso.fechar_barra()
                     driver.find_element('xpath', '//*[@id="header"]/div[2]/a').click()
@@ -366,7 +383,7 @@ def solicitar_ou_baixar():
                     )
                     
                     data_abertura = ret_data_abertura_empresa(cnpj)
-                    if data_abertura >= data_inicial:
+                    if data_abertura >= data_inicial:                        
                         start_date = data_abertura
                     else:
                         start_date = data_inicial
@@ -427,7 +444,7 @@ def solicitar_ou_baixar():
                             }}
                             return fetchData();
                         """)
-
+                        erros_datas = ''
                         # Processa a resposta
                         if 'error' in response:
                             barra_progresso.fechar_barra()
@@ -458,6 +475,12 @@ def solicitar_ou_baixar():
                         # Atualiza a data atual para a próxima iteração                            
                         start_date = data_final + timedelta(days=1)
                         data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                        linha_celula = linha[4]
+                        if hasattr(linha_celula, 'row'):
+                            linha_atual = linha_celula.row
+                            sheet_empresas[f"H{linha_atual}"] = "OK"
+                            sheet_empresas[f"J{linha_atual}"] = data_inicial_str + " a " + data_final_str
+                            workbook.save(caminho_planilha_var.get())
                     
                     barra_progresso.fechar_barra()
                     driver.find_element('xpath', '//*[@id="header"]/div[2]/a').click()
@@ -469,17 +492,22 @@ def solicitar_ou_baixar():
     elif opcao == 2 and certificado_proprio_var.get() is False:
         url = 'https://login.esocial.gov.br/login.aspx'
         folder_path = "c:\\chromedriver"
-
         download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')
-        
+
         def criar_pasta(nome_empresa):
             pasta_empresa = os.path.join(download_dir, nome_empresa)
             if not os.path.exists(pasta_empresa):
                 os.makedirs(pasta_empresa)
-            return pasta_empresa        
+            return pasta_empresa
         
         chrome_options = ChromeOptions()
-        prefs = {'download.default_directory': download_dir}
+        prefs = {"download.default_directory": download_dir,
+                 "download.prompt_for_download": False,
+                "download.directory_upgrade": True,
+                "plugins.always_open_pdf_externally": True,
+                 "profile.default_content_setting_values.automatic_downloads": 1,
+                 "profile.content_settings.exceptions.automatic_downloads.*.setting": 1,
+                 "safebrowsing.enabled": False}
         chrome_options.add_experimental_option('prefs', prefs)
         chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                             force_update=True)
@@ -520,6 +548,9 @@ def solicitar_ou_baixar():
         empresas = list(sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())))            
 
         for linha in sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())):
+            WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.XPATH, '//*[@id="perfilAcesso"]'))
+                    )
             pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value.rstrip()}')
             documento = len(str(linha[2].value))
             if documento >= 15: #CNPJ
@@ -561,87 +592,36 @@ def solicitar_ou_baixar():
                     WebDriverWait(driver, 120).until(
                     EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
                 )
-                    driver.find_element('xpath', '//*[@id="menuDownload"]').click()
-                    driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(
-                    Keys.DOWN + Keys.DOWN + Keys.ENTER)
-                    WebDriverWait(driver, 120).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
-                )
-                    driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
-                    time.sleep(5)
-                    print(f'Iniciando download da empresa CNPJ: {cnpj}')                    
-
-                    # Página 1
-                    for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                        link.click()
-                        time.sleep(7)
+                    driver.get("https://www.esocial.gov.br/portal/download/Pedido/Consulta")
+                    WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input')))
+                    driver.find_element(By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
+                    driver.execute_script(script_download)
+                    print("Baixando arquivos...")                        
+                    WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[13]/button[2]')))
+                    driver.find_element(By.XPATH, '/html/body/div[13]/button[2]').click()
+                    # Função para mover arquivos .zip
+                    def verificar_e_mover_arquivos_zip():
                         arquivos_baixados = os.listdir(download_dir)
                         for arquivo in arquivos_baixados:
                             if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                 caminho_arquivo = os.path.join(download_dir, arquivo)
                                 shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-                    # Página 2
-                    try:
-                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
-                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                            link.click()
-                            time.sleep(7)                            
-                            arquivos_baixados = os.listdir(download_dir)
-                            for arquivo in arquivos_baixados:
-                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
-                                    caminho_arquivo = os.path.join(download_dir, arquivo)
-                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))                                    
-
-                        loop = False
-
-                        if loop == False:
-                            linha_celula = linha[4]
-                            if hasattr(linha_celula, 'row'):
-                                linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
-                                workbook.save(caminho_planilha_var.get())
-                        
-                    except:
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-                        continue
+                                print(f"Arquivo {arquivo} movido para {pasta_empresa}")
                     
-                    # Página 3
-                    try:
-                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[3]')))
-                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[3]').click()
-                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                            link.click()
-                            time.sleep(7)                            
-                            arquivos_baixados = os.listdir(download_dir)
-                            for arquivo in arquivos_baixados:
-                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
-                                    caminho_arquivo = os.path.join(download_dir, arquivo)
-                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-                        loop = False
-
-                        if loop == False:
-                            linha_celula = linha[4]
-                            if hasattr(linha_celula, 'row'):
-                                linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
-                                workbook.save(caminho_planilha_var.get())
-
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-
-                    except:
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-                        continue                
+                    intervalo_verificacao = 20  # segundos
+                    time.sleep(10)
+                    download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')            
+                    loop = True            
+                    while loop == True:
+                        arquivos_baixados = os.listdir(download_dir)
+                        existe_zip = any(arquivo.endswith('.zip') for arquivo in arquivos_baixados)
+                        if existe_zip:
+                            verificar_e_mover_arquivos_zip()
+                            print(f"Aguardando {intervalo_verificacao} segundos para próxima verificação de arquivos baixados...")
+                            time.sleep(intervalo_verificacao)                    
+                        else:
+                            loop = False
+                            print(f"Todos arquivos da empresa {cnpj} foram baixados!")
 
             else: #CPF
                 cnpj = linha[2].value
@@ -682,89 +662,43 @@ def solicitar_ou_baixar():
                     WebDriverWait(driver, 120).until(
                     EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
                 )
-                    driver.find_element('xpath', '//*[@id="menuDownload"]').click()
-                    driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(
-                    Keys.DOWN + Keys.DOWN + Keys.ENTER)
-                    WebDriverWait(driver, 120).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
-                )
-                    driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
-                    time.sleep(5)
-                    print(f'Iniciando download da empresa CNPJ: {cnpj}')                    
-
-                    # Página 1
-                    for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                        link.click()
-                        time.sleep(7)
+                    driver.get("https://www.esocial.gov.br/portal/download/Pedido/Consulta")
+                    WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input')))
+                    driver.find_element(By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
+                    driver.execute_script(script_download)
+                    print("Baixando arquivos...")                        
+                    WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[13]/button[2]')))
+                    driver.find_element(By.XPATH, '/html/body/div[13]/button[2]').click()
+                    # Função para mover arquivos .zip
+                    def verificar_e_mover_arquivos_zip():
                         arquivos_baixados = os.listdir(download_dir)
                         for arquivo in arquivos_baixados:
                             if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                                 caminho_arquivo = os.path.join(download_dir, arquivo)
                                 shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-                    # Página 2
-                    try:
-                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
-                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                            link.click()
-                            time.sleep(7)                            
-                            arquivos_baixados = os.listdir(download_dir)
-                            for arquivo in arquivos_baixados:
-                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
-                                    caminho_arquivo = os.path.join(download_dir, arquivo)
-                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))                                    
-
-                        loop = False
-
-                        if loop == False:
-                            linha_celula = linha[4]
-                            if hasattr(linha_celula, 'row'):
-                                linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
-                                workbook.save(caminho_planilha_var.get())
-                        
-                    except:
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-                        continue
+                                print(f"Arquivo {arquivo} movido para {pasta_empresa}")
                     
-                    # Página 3
-                    try:
-                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[3]')))
-                        driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[3]').click()
-                        for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                            link.click()
-                            time.sleep(7)                            
-                            arquivos_baixados = os.listdir(download_dir)
-                            for arquivo in arquivos_baixados:
-                                if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
-                                    caminho_arquivo = os.path.join(download_dir, arquivo)
-                                    shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-                        loop = False
+                    intervalo_verificacao = 20  # segundos
+                    time.sleep(10)
+                    download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')            
+                    loop = True            
+                    while loop == True:
+                        arquivos_baixados = os.listdir(download_dir)
+                        existe_zip = any(arquivo.endswith('.zip') for arquivo in arquivos_baixados)
+                        if existe_zip:
+                            verificar_e_mover_arquivos_zip()
+                            print(f"Aguardando {intervalo_verificacao} segundos para próxima verificação de arquivos baixados...")
+                            time.sleep(intervalo_verificacao)                    
+                        else:
+                            loop = False
+                            print(f"Todos arquivos da empresa {cnpj} foram baixados!")
 
-                        if loop == False:
-                            linha_celula = linha[4]
-                            if hasattr(linha_celula, 'row'):
-                                linha_atual = linha_celula.row
-                                sheet_empresas[f'H{linha_atual}'] = 'Baixados todos arquivos'
-                                workbook.save(caminho_planilha_var.get())
+            driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
+            WebDriverWait(driver, 120).until(
+                    EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
+                )
 
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-                        
-                    except:
-                        print(f'Arquivos da empresa CNPJ: {cnpj} baixados com sucesso!')
-                        time.sleep(2)
-                        driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                        time.sleep(2)
-                        continue
-
-        print("Baixa de arquivos finalizada com sucesso")
+        print("Baixa de arquivos finalizada!")
         time.sleep(3)
         driver.quit()    
 
@@ -802,8 +736,10 @@ def solicitar_ou_baixar():
         WebDriverWait(driver, 120).until(
                 EC.presence_of_element_located((By.XPATH, '//*[@id="TipoPedido"]'))
             )
+        cnpj = driver.find_element('xpath', '//*[@id="header"]/div[2]/p[2]/span[1]').text[0:18]        
+        data_abertura = ret_data_abertura_empresa(cnpj)
         data_inicial = datetime(2018, 1, 1)
-        data_abertura = datetime(2018, 1, 1)        
+        
         if data_abertura >= data_inicial:
             start_date = data_abertura
         else:
@@ -865,7 +801,8 @@ def solicitar_ou_baixar():
                 }}
                 return fetchData();
             """)
-
+            
+            erros_datas = ''
             # Processa a resposta
             if 'error' in response:
                 barra_progresso.fechar_barra()
@@ -896,7 +833,7 @@ def solicitar_ou_baixar():
             # Atualiza a data atual para a próxima iteração                            
             start_date = data_final + timedelta(days=1)
             data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
-        
+                    
         barra_progresso.fechar_barra()        
 
         print('Buscas Finalizadas')
@@ -913,32 +850,28 @@ def solicitar_ou_baixar():
             if not os.path.exists(pasta_empresa):
                 os.makedirs(pasta_empresa)
             return pasta_empresa
-        
+
         chrome_options = ChromeOptions()
-        prefs = {'download.default_directory': download_dir}
+        prefs = {"download.default_directory": download_dir,
+                 "download.prompt_for_download": False,
+                "download.directory_upgrade": True,
+                "plugins.always_open_pdf_externally": True,
+                 "profile.default_content_setting_values.automatic_downloads": 1,
+                 "profile.content_settings.exceptions.automatic_downloads.*.setting": 1,
+                 "safebrowsing.enabled": False}
         chrome_options.add_experimental_option('prefs', prefs)
         chromedriver_path = download_undetected_chromedriver(folder_path, undetected=True, arm=False,
                                                             force_update=True)
         driver = uc.Chrome(driver_executable_path=chromedriver_path, options=chrome_options, headless=False)            
         driver.get(url)
         driver.maximize_window()
-        WebDriverWait(driver, 120).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="login-acoes"]/div[2]/p/button'))
-        )
+        WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '//*[@id="login-acoes"]/div[2]/p/button')))
         driver.find_element('xpath', '//*[@id="login-acoes"]/div[2]/p/button').click()
-
-        WebDriverWait(driver, 120).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="login-certificate"]'))
-        )
+        WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '//*[@id="login-certificate"]')))
         driver.find_element('xpath', '//*[@id="login-certificate"]').click()
-
         print("Selecione o certificado para continuar")
-
         root.iconify()
-
-        WebDriverWait(driver, 120).until(
-            EC.presence_of_element_located((By.XPATH, '//*[@id="sairAplicacao"]'))
-        )
+        WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '//*[@id="sairAplicacao"]')))
 
         workbook = openpyxl.load_workbook(caminho_planilha_var.get())
         sheet_empresas = workbook.active        
@@ -947,65 +880,40 @@ def solicitar_ou_baixar():
 
         for linha in sheet_empresas.iter_rows(min_row=int(linha_ini.get()), max_row=int(linha_fim.get())):
             pasta_empresa = criar_pasta(f'{linha[0].value} - {linha[1].value.rstrip()}')
-            WebDriverWait(driver, 120).until(
-                EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]'))
-            )
-            driver.find_element('xpath', '//*[@id="menuDownload"]').click()
-            driver.find_element('xpath', '//*[@id="menuDownload"]').send_keys(
-                Keys.DOWN + Keys.DOWN + Keys.ENTER)
-            WebDriverWait(driver, 120).until(
-                EC.presence_of_element_located(
-                    (By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input'))
-            )
-            driver.find_element('xpath', '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
-            time.sleep(10)
-
-            download_links = driver.find_elements('xpath', '//*[@id="DataTables_Table_0"]/tbody/tr/td/a')
-            total_files = (len(download_links))
-            print(f'Total de arquivos: {total_files}')
-            soma_files = 0
-
-            for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                link.click()
-                time.sleep(7)
-                soma_files += 1
-                print(f'Baixando {soma_files}/{total_files} arquivos')
+            WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '//*[@id="menuDownload"]')))
+            driver.get("https://www.esocial.gov.br/portal/download/Pedido/Consulta")
+            WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input')))
+            driver.find_element(By.XPATH, '//*[@id="conteudo-pagina"]/form/section/div/div[4]/input').click()
+            driver.execute_script(script_download)
+            print("Baixando arquivos...")                        
+            WebDriverWait(driver, 120).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[13]/button[2]')))
+            driver.find_element(By.XPATH, '/html/body/div[13]/button[2]').click()
+            # Função para mover arquivos .zip
+            def verificar_e_mover_arquivos_zip():
                 arquivos_baixados = os.listdir(download_dir)
                 for arquivo in arquivos_baixados:
                     if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
                         caminho_arquivo = os.path.join(download_dir, arquivo)
                         shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-
-            try:
-                WebDriverWait(driver, 3).until(
-                    EC.presence_of_element_located(
-                        (By.XPATH, '//*[@id="DataTables_Table_0_paginate"]/span/a[2]')))
-                driver.find_element('xpath', '//*[@id="DataTables_Table_0_paginate"]/span/a[2]').click()
-                download_links = driver.find_elements('xpath', '//*[@id="DataTables_Table_0"]/tbody/tr/td/a')
-                total_files2 = (len(download_links))
-                for link in driver.find_elements(By.CLASS_NAME, 'icone-baixar'):
-                    link.click()
-                    time.sleep(7)
-                    soma_files += 1
-                    print(f'Baixando {soma_files}/{total_files + total_files2} arquivos')
-                    arquivos_baixados = os.listdir(download_dir)
-                    for arquivo in arquivos_baixados:
-                        if arquivo.endswith(".zip"):  # Verifica se o arquivo é um ZIP
-                            caminho_arquivo = os.path.join(download_dir, arquivo)
-                            shutil.move(caminho_arquivo, os.path.join(pasta_empresa, arquivo))
-
-            except:
-                time.sleep(2)
-                driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-                time.sleep(2)
-                continue
-
-            time.sleep(2)
-            driver.find_element(By.XPATH, '//*[@id="header"]/div[2]/a').click()
-            time.sleep(2)
-
-        print("Baixa de arquivos finalizada com sucesso")
-        time.sleep(5)
+                        print(f"Arquivo {arquivo} movido para {pasta_empresa}")
+            
+            intervalo_verificacao = 20  # segundos
+            time.sleep(10)
+            download_dir = caminho_pasta_salvar_var.get().rstrip().replace('/', '\\')            
+            loop = True            
+            while loop == True:
+                arquivos_baixados = os.listdir(download_dir)
+                existe_zip = any(arquivo.endswith('.zip') for arquivo in arquivos_baixados)
+                if existe_zip:
+                    verificar_e_mover_arquivos_zip()
+                    print(f"Aguardando {intervalo_verificacao} segundos para próxima verificação de arquivos baixados...")
+                    time.sleep(intervalo_verificacao)                    
+                else:
+                    loop = False
+                    print(f"Todos arquivos da empresa {cnpj} foram baixados!")    
+        
+        print("Baixa de arquivos finalizada!")            
+        driver.quit()
 
 def meses_buscar():
     # Função que será chamada quando o botão for clicado
@@ -1024,7 +932,6 @@ def selecionar_pasta_salvar():
 # Criando a janela principal
 root = tk.Tk()
 root.title("Download eSocial")
-root.geometry("500x300")
 root.resizable(False, False)
 
 # Labels
@@ -1034,8 +941,7 @@ labels = [
     "Linha final da planilha:",
     "Meses a buscar:", 
     "Solicitar (1) / Baixar (2):",   
-    "Salvar arquivos:",
-    "Data Inicial (DD/MM/AAAA):",
+    "Salvar arquivos:",    
     "Certificado próprio:"
 ]
 
@@ -1045,7 +951,6 @@ caminho_pasta_salvar_var = tk.StringVar()
 certificado_proprio_var = tk.BooleanVar()
 linha_ini = tk.IntVar()
 linha_fim = tk.IntVar()
-data_ini = tk.StringVar()
 
 # Posicionamento dos labels e entradas
 for i, label_text in enumerate(labels):
@@ -1063,11 +968,6 @@ for i, label_text in enumerate(labels):
     elif i == 2:
         entry = tk.Entry(root, textvariable=linha_fim)
         entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew") 
-    elif i == 5:
-        entry = tk.Entry(root, textvariable=caminho_pasta_salvar_var)
-        entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
-        button = tk.Button(root, text="Selecionar", command=selecionar_pasta_salvar)
-        button.grid(row=i, column=2, padx=5, pady=5)
     elif i == 3:
         meses_buscar_var = tk.IntVar()
         dropdown = ttk.Combobox(root, values=[1, 2, 3, 4, 5, 6], textvariable=meses_buscar_var, state="readonly")
@@ -1076,10 +976,12 @@ for i, label_text in enumerate(labels):
         solicitar_baixar_var = tk.IntVar()
         dropdown = ttk.Combobox(root, values=[1, 2], textvariable=solicitar_baixar_var, state="readonly")
         dropdown.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
+    elif i == 5:
+        entry = tk.Entry(root, textvariable=caminho_pasta_salvar_var)
+        entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
+        button = tk.Button(root, text="Selecionar", command=selecionar_pasta_salvar)
+        button.grid(row=i, column=2, padx=5, pady=5)
     elif i == 6:
-        entry = tk.Entry(root, textvariable=data_ini)
-        entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")     
-    elif i == 7:
         checkbutton = tk.Checkbutton(root, variable=certificado_proprio_var)
         checkbutton.grid(row=i, column=1, padx=5, pady=5, sticky="w")
     else:
