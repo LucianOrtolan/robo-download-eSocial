@@ -34,7 +34,7 @@ def retorna_qtd_loop(start_date,end_date,data_corte):
             loop = False   
              
          data_ini = data_fim + timedelta(days=1)
-         data_fim = data_ini + timedelta(days=30*int(meses_buscar_var.get()))
+         data_fim = data_ini + timedelta(days=31*int(meses_buscar_var.get()))
          conta_loop = conta_loop + 1 
           
       return conta_loop
@@ -52,6 +52,7 @@ def ret_data_abertura_empresa(cnpj):
             # Obtém o valor da chave "abertura"
             abertura_string = data_json.get("abertura")           
             abertura_data = datetime.strptime(abertura_string, "%d/%m/%Y")
+            print(f"Data de abertura: {abertura_data.strftime('%d/%m/%Y')}")
             #print("abertura_data CNPJ:",abertura_data) 
          else:
             print('Sem retorno de data na rotina 1') 
@@ -61,6 +62,7 @@ def ret_data_abertura_empresa(cnpj):
                data_json = response.json()  
                abertura_string = data_json.get("DATA ABERTURA")              
                abertura_data = datetime.strptime(abertura_string, "%d/%m/%Y")
+               print(f"Data de abertura: {abertura_data.strftime('%d/%m/%Y')}")
             else:              
                print("Sem retorno de data na rotina 2") 
                response = requests.get(f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_sem_mascara}") 
@@ -69,7 +71,8 @@ def ret_data_abertura_empresa(cnpj):
                if response.status_code == 200:
                   data_json = response.json()    
                   abertura_string = data_json.get("data_inicio_atividade")                  
-                  abertura_data = datetime.strptime(abertura_string, "%Y-%m-%d") 
+                  abertura_data = datetime.strptime(abertura_string, "%Y-%m-%d")
+                  print(f"Data de abertura: {abertura_data.strftime('%d/%m/%Y')}") 
                else:              
                   print("Sem retorno de data na rotina 3") 
        
@@ -217,8 +220,8 @@ def solicitar_ou_baixar():
 
                     if hasattr(linha_celula, 'row'):
                         linha_atual = linha_celula.row
-                        sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
-                        workbook.save(caminho_planilha_var.get())
+                        sheet_empresas[f"H{linha_atual}"] = "Não possui procuração"                        
+                        workbook.save(caminho_planilha_var.get())                        
                         print('Retornando as buscas')
                         driver.refresh()
                         continue
@@ -241,7 +244,7 @@ def solicitar_ou_baixar():
                     else:
                         start_date = data_inicial
 
-                    data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+                    data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))    
                     data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
                     qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
@@ -327,7 +330,7 @@ def solicitar_ou_baixar():
                     
                         # Atualiza a data atual para a próxima iteração                            
                         start_date = data_final + timedelta(days=1)
-                        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                        data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))
                         linha_celula = linha[4]
                         if hasattr(linha_celula, 'row'):
                             linha_atual = linha_celula.row
@@ -388,7 +391,7 @@ def solicitar_ou_baixar():
                     else:
                         start_date = data_inicial
 
-                    data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+                    data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))    
                     data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
                     qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
@@ -474,7 +477,7 @@ def solicitar_ou_baixar():
                     
                         # Atualiza a data atual para a próxima iteração                            
                         start_date = data_final + timedelta(days=1)
-                        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+                        data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))
                         linha_celula = linha[4]
                         if hasattr(linha_celula, 'row'):
                             linha_atual = linha_celula.row
@@ -745,7 +748,7 @@ def solicitar_ou_baixar():
         else:
             start_date = data_inicial
 
-        data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))    
+        data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))    
         data_corte = datetime.strptime(driver.find_element(By.CLASS_NAME, 'alert-info').text[58:68],'%d/%m/%Y')
 
         qtd_loop = retorna_qtd_loop(start_date,data_final,data_corte)
@@ -832,7 +835,7 @@ def solicitar_ou_baixar():
         
             # Atualiza a data atual para a próxima iteração                            
             start_date = data_final + timedelta(days=1)
-            data_final = start_date + timedelta(days=30*int(meses_buscar_var.get()))
+            data_final = start_date + timedelta(days=31*int(meses_buscar_var.get()))
                     
         barra_progresso.fechar_barra()        
 
