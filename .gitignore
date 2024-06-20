@@ -18,3 +18,7 @@ build/eSocial_nova_interface/xref-eSocial_nova_interface.html
 dist/eSocial_nova_interface.exe
 eSocial_nova_interface.spec
 dist/eSocial_nova_interface.exe
+eSocial_nova_interface.spec
+build/eSocial_nova_interface/Analysis-00.toc
+build/eSocial_nova_interface/xref-eSocial_nova_interface.html
+dist/eSocial_nova_interface.exe
