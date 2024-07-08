@@ -205,14 +205,14 @@ def solicitar_ou_baixar():
                     )
                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
                 mensagem_procuracao = ''
-                cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
+                cnpjInvalido = ''
                 try:
                     WebDriverWait(driver, 15).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                     )
                 except:
                     mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
-                    cnpjInvalido
+                    cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
 
                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                 print(mensagem_procuracao)
@@ -231,7 +231,7 @@ def solicitar_ou_baixar():
                 elif cnpjInvalido == 'CNPJ inválido.':                    
                     print(f'CNPJ inválido {cnpj}')
                     linha_celula = linha[4]
-                    
+
                     if hasattr(linha_celula, 'row'):
                         linha_atual = linha_celula.row
                         sheet_empresas[f"H{linha_atual}"] = "CNPJ inválido"                        
