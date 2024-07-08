@@ -372,13 +372,19 @@ def solicitar_ou_baixar():
                     )
                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
                 mensagem_procuracao = ''
+                cnpjInvalido = ''
                 try:
-                    WebDriverWait(driver, 15).until(
+                    WebDriverWait(driver, 8).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                     )
                 except:
-                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]                
                 
+                try:
+                    cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
+                except:                    
+                    cnpjInvalido = ''
+
                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                 print(mensagem_procuracao)
                 if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
@@ -387,8 +393,20 @@ def solicitar_ou_baixar():
 
                     if hasattr(linha_celula, 'row'):
                         linha_atual = linha_celula.row
-                        sheet_empresas[f'F{linha_atual}'] = 'Não possui procuração'
-                        workbook.save(caminho_planilha_var.get())
+                        sheet_empresas[f"H{linha_atual}"] = "Não possui procuração"                        
+                        workbook.save(caminho_planilha_var.get())                        
+                        print('Retornando as buscas')
+                        driver.refresh()
+                        continue
+
+                elif cnpjInvalido == 'CPF inválido.':                    
+                    print(f'CPF inválido {cnpj}')
+                    linha_celula = linha[4]
+
+                    if hasattr(linha_celula, 'row'):
+                        linha_atual = linha_celula.row
+                        sheet_empresas[f"H{linha_atual}"] = "CPF inválido"                        
+                        workbook.save(caminho_planilha_var.get())                        
                         print('Retornando as buscas')
                         driver.refresh()
                         continue
@@ -588,22 +606,41 @@ def solicitar_ou_baixar():
                         )
                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cnpj"]').click()
                 mensagem_procuracao = ''
+                cnpjInvalido = ''
                 try:
-                    WebDriverWait(driver, 15).until(
+                    WebDriverWait(driver, 8).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                     )
                 except:
-                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]                
+                
+                try:
+                    cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
+                except:                    
+                    cnpjInvalido = ''
 
-                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado                                
-                if mensagem_procuracao:
+                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
+                print(mensagem_procuracao)
+                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                     print(f'Não possui procuração para o {cnpj}')
                     linha_celula = linha[4]
 
                     if hasattr(linha_celula, 'row'):
                         linha_atual = linha_celula.row
-                        sheet_empresas[f'H{linha_atual}'] = 'Não possui procuração'
-                        workbook.save(caminho_planilha_var.get())
+                        sheet_empresas[f"H{linha_atual}"] = "Não possui procuração"                        
+                        workbook.save(caminho_planilha_var.get())                        
+                        print('Retornando as buscas')
+                        driver.refresh()
+                        continue
+
+                elif cnpjInvalido == 'CNPJ inválido.':                    
+                    print(f'CNPJ inválido {cnpj}')
+                    linha_celula = linha[4]
+
+                    if hasattr(linha_celula, 'row'):
+                        linha_atual = linha_celula.row
+                        sheet_empresas[f"H{linha_atual}"] = "CNPJ inválido"                        
+                        workbook.save(caminho_planilha_var.get())                        
                         print('Retornando as buscas')
                         driver.refresh()
                         continue
@@ -658,22 +695,41 @@ def solicitar_ou_baixar():
                         )
                 driver.find_element('xpath', '//*[@id="btn-verificar-procuracao-cpf"]').click()
                 mensagem_procuracao = ''
+                cnpjInvalido = ''
                 try:
-                    WebDriverWait(driver, 15).until(
+                    WebDriverWait(driver, 8).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                     )
                 except:
-                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]                
+                
+                try:
+                    cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
+                except:                    
+                    cnpjInvalido = ''
 
-                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado                                
-                if mensagem_procuracao:
+                # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
+                print(mensagem_procuracao)
+                if mensagem_procuracao == 'O procurador não possui perfil com autorização de acesso à Web':
                     print(f'Não possui procuração para o {cnpj}')
                     linha_celula = linha[4]
 
                     if hasattr(linha_celula, 'row'):
                         linha_atual = linha_celula.row
-                        sheet_empresas[f'H{linha_atual}'] = 'Não possui procuração'
-                        workbook.save(caminho_planilha_var.get())
+                        sheet_empresas[f"H{linha_atual}"] = "Não possui procuração"                        
+                        workbook.save(caminho_planilha_var.get())                        
+                        print('Retornando as buscas')
+                        driver.refresh()
+                        continue
+
+                elif cnpjInvalido == 'CPF inválido.':                    
+                    print(f'CPF inválido {cnpj}')
+                    linha_celula = linha[4]
+
+                    if hasattr(linha_celula, 'row'):
+                        linha_atual = linha_celula.row
+                        sheet_empresas[f"H{linha_atual}"] = "CPF inválido"                        
+                        workbook.save(caminho_planilha_var.get())                        
                         print('Retornando as buscas')
                         driver.refresh()
                         continue
