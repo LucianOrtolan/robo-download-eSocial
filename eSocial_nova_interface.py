@@ -207,12 +207,16 @@ def solicitar_ou_baixar():
                 mensagem_procuracao = ''
                 cnpjInvalido = ''
                 try:
-                    WebDriverWait(driver, 15).until(
+                    WebDriverWait(driver, 8).until(
                         EC.element_to_be_clickable((By.XPATH, '//*[@id="geral"]/div'))
                     )
                 except:
-                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]
+                    mensagem_procuracao = driver.find_element(By.CLASS_NAME, 'fade-alert').text[2:]                
+                
+                try:
                     cnpjInvalido = driver.find_element(By.XPATH, '//*[@id="procuradorCnpj-error"]').text[0:]
+                except:                    
+                    cnpjInvalido = ''
 
                 # Condição se verifica se possui procuração para o CNPJ que está sendo procurado
                 print(mensagem_procuracao)
